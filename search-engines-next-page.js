@@ -64,10 +64,7 @@
 
             (function() {
                 // 隐藏第一页底部的页码
-                console.log("隐藏第一页底部的页码");
                 $(bingObj.config.parentNodeName).children().slice(-3).hide();
-                console.log("隐藏第一页底部的页码ok  ");
-
             })();
         };
 
