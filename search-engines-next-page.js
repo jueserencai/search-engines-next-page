@@ -10,7 +10,7 @@
 // @include      https://www.baidu.com/s*
 // @include      https://www.so.com/s*
 // @require      https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js
-// @run-at       document-start
+// @run-at       document-end
 // @connect      *
 // ==/UserScript==
 
@@ -61,6 +61,14 @@
             this.updateQuery = function(queryString) {
                 bingObj.config.data.q = queryString;
             };
+
+            (function() {
+                // 隐藏第一页底部的页码
+                console.log("隐藏第一页底部的页码");
+                $(bingObj.config.parentNodeName).children().slice(-3).hide();
+                console.log("隐藏第一页底部的页码ok  ");
+
+            })();
         };
 
         this.baidu = function() {
