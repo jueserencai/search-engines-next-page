@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         搜索引擎自动加载下一页
 // @namespace    http://tampermonkey.net/
-// @home-url     
+// @home-url     https://github.com/jueserencai/search-engines-next-page
 // @description  搜索引擎自动加载下一页，包括baidu sogou bing 360so
 // @version      0.0.2
 // @author       绝色人才
@@ -200,12 +200,13 @@
                 success: function(data, status) {
                     let contentNode = $(data).find(searchEngine.config.parentNodeName).find(searchEngine.config.contentNodeName);
                     let $div = $(searchEngine.config.parentNodeName);
-                    // 下一页内容插入当前页末尾
-                    $div.append(contentNode);
-                    // 两页之间添加分割线
-                    $div.append(`
+                     // 两页之间添加分割线
+                     $div.append(`
                         <div style="height: 20px;"><HR style="FILTER: progid:DXImageTransform.Microsoft.Glow(color=#987cb9,strength=10)" width="100%" color=#987cb9 SIZE=1></div>
                     `);
+                    // 下一页内容插入当前页末尾
+                    $div.append(contentNode);
+                   
                     searchEngine.nextPage();
 
                     // 调用滚动到底部检测
