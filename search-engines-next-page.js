@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @home-url     
 // @description  搜索引擎自动加载下一页，包括baidu sogou bing 360so
-// @version      0.0.1
+// @version      0.0.2
 // @author       绝色人才
 // @include      https://www.sogou.com/web*
 // @include      https://cn.bing.com/search*
@@ -14,19 +14,22 @@
 // @connect      *
 // ==/UserScript==
 
+
 (function () {
     'use strict';
-
+    
     // console.log("ok1");
     /* 返回网址对应的搜索引擎类，包含ajax参数，更新下一页码、查询关键词等的方法 */
     function Config() {
         this.sogou = function () {
+            // 类型1是搜索引擎
+            this.type = 1;
             this.config = {
                 url: "https://www.sogou.com/web",
                 data: {
                     ie: "utf8",
                     query: "",
-                    page: 2,
+                    page: 1,
                 },
                 getOrPost: "GET",
                 parentNodeName: "#main",
@@ -35,7 +38,13 @@
             };
             let sogouObj = this;
             this.nextPage = function () {
-                return sogouObj.config.data.page += 1;
+                sogouObj.config.data.page += 1;
+            };
+            this.resetPage = function () {
+                sogouObj.config.data.page = 1;
+            };
+            this.getQuery = function() {
+                return sogouObj.config.data.query;
             };
             this.updateQuery = function(queryString) {
                 sogouObj.config.data.query = queryString;
@@ -43,11 +52,13 @@
         };
 
         this.bing = function() {
+            // 类型1是搜索引擎
+            this.type = 1;
             this.config = {
                 url: "https://cn.bing.com/search",
                 data: {
                     q: "",
-                    first: 10,
+                    first: 0,
                 },
                 getOrPost: "GET",
                 parentNodeName: "#b_results",
@@ -57,6 +68,12 @@
             let bingObj = this;
             this.nextPage = function () {
                 return bingObj.config.data.first += 10;
+            };
+            this.resetPage = function () {
+                bingObj.config.data.first = 0;
+            };
+            this.getQuery = function() {
+                return bingObj.config.data.q;
             };
             this.updateQuery = function(queryString) {
                 bingObj.config.data.q = queryString;
@@ -69,12 +86,14 @@
         };
 
         this.baidu = function() {
+            // 类型1是搜索引擎
+            this.type = 1;
             this.config = {
                 url: "https://www.baidu.com/s",
                 data: {
                     ie: "utf-8",
                     wd: "",
-                    pn: 10,
+                    pn: 0,
                 },
                 getOrPost: "GET",
                 parentNodeName: "#content_left",
@@ -83,10 +102,13 @@
             };
             let baiduObj = this;
             this.nextPage = function () {
-                return baiduObj.config.data.pn += 10;
+                baiduObj.config.data.pn += 10;
             };
             this.resetPage = function () {
-                baiduObj.config.data.pn = 10;
+                baiduObj.config.data.pn = 0;
+            };
+            this.getQuery = function() {
+                return baiduObj.config.data.wd;
             };
             this.updateQuery = function(queryString) {
                 baiduObj.config.data.wd = queryString;
@@ -101,11 +123,13 @@
         };
 
         this.so360 = function() {
+            // 类型1是搜索引擎
+            this.type = 1;
             this.config = {
                 url: "https://www.so.com/s",
                 data: {
                     q: "",
-                    pn: 2,
+                    pn: 1,
                 },
                 getOrPost: "GET",
                 parentNodeName: "#main > .result",
@@ -114,7 +138,13 @@
             };
             let so360Obj = this;
             this.nextPage = function () {
-                return so360Obj.config.data.pn += 1;
+                so360Obj.config.data.pn += 1;
+            };
+            this.resetPage = function () {
+                so360Obj.config.data.pn = 1;
+            };
+            this.getQuery = function() {
+                return so360Obj.config.data.q;
             };
             this.updateQuery = function(queryString) {
                 so360Obj.config.data.q = queryString;
@@ -145,20 +175,46 @@
 
     /* 加载下一页数据，插入当前页 */
     function PreLoader() {
-        this.load = function (callback) {
-            searchEngine.updateQuery($(searchEngine.config.inputId).val());
-            // console.log(searchEngine.config.data);
-            // console.log("page:",  searchEngine.config.data.page);
+        let preLoaderObj = this;
+        // 预处理
+        this.preprocessing = function(searchEngine) {
+            // 更新查询字符串，页码
+            let queryString = $(searchEngine.config.inputId).val();
+            let oldQueryString = searchEngine.getQuery();
+            searchEngine.updateQuery(queryString);
+            if (oldQueryString == "") {
+                searchEngine.nextPage();
+            }else if (oldQueryString != queryString) {
+                searchEngine.resetPage();
+            }
+        };
+        this.loadNextPage = function(callback) {
+            // 调用预处理
+            preLoaderObj.preprocessing(searchEngine);
+
+            // ajax请求下一页，并插进当前页中
             $.ajax({
                 url: searchEngine.config.url,
                 type: searchEngine.config.getOrPost,
                 data: searchEngine.config.data,
-                success: function (data, status) {
+                success: function(data, status) {
                     let contentNode = $(data).find(searchEngine.config.parentNodeName).find(searchEngine.config.contentNodeName);
-                    $(searchEngine.config.parentNodeName).append(contentNode);
+                    let $div = $(searchEngine.config.parentNodeName);
+                    // 下一页内容插入当前页末尾
+                    $div.append(contentNode);
+                    // 两页之间添加分割线
+                    $div.append(`
+                        <div style="height: 20px;"><HR style="FILTER: progid:DXImageTransform.Microsoft.Glow(color=#987cb9,strength=10)" width="100%" color=#987cb9 SIZE=1></div>
+                    `);
                     searchEngine.nextPage();
-                    // console.log();
+
+                    // 调用滚动到底部检测
                     callback();
+                },
+                error: function(e) {
+                    if (e.status == 404) {
+                        $(searchEngine.config.parentNodeName).append(`<p style="text-align: center; font-size: 18px;">已完</p>`);
+                    }
                 },
             });
         };
@@ -168,15 +224,15 @@
 
     /* 滚动到底部检测，判断是否要插入下一页 */
     (function scrollLoadPage() {
-        $(window).unbind("scroll").scroll(function () {
+        $(window).unbind("scroll").scroll(function() {
             let scrollTop = $(this).scrollTop();     //获取滚动条到顶部的距离
-            let windowHeight = window.screen.height;        //获取窗口的高度
+            let windowHeight = window.screen.height * 1.5;        //获取窗口的高度
             let documentHeight = $(document).height();    //获取文档区域高度
 
             // console.log(scrollTop, windowHeight, documentHeight);
             if (scrollTop + windowHeight >= documentHeight) {
                 $(this).unbind("scroll");
-                preLoader.load(scrollLoadPage);
+                preLoader.loadNextPage(scrollLoadPage);
             }
         });
     })();
